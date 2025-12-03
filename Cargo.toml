@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "crates/crypto",
+    "crates/blind-token-service",
+    "crates/dip-service",
+    "crates/enclave-sim",
+    "crates/vpn-server",
+    "crates/client",
+]
+resolver = "2"
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = "0.7"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
