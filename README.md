@@ -423,6 +423,11 @@ MIT License - see [LICENSE](LICENSE) file.
 
 Academic paper: [ZK-DIP Research Paper](docs/research/ZK-DIP-Research-Paper.txt)
 
+**Citation:**
+
+Tatlisu, A. (2025). ZK-DIP: A Zero-Knowledge Protocol for Anonymous
+Dedicated IP Assignment in VPN Systems.
+
 ## 📞 Support
 
 - Issues: [GitHub Issues](https://github.com/ChronoCoders/zero-knowledge-dip/issues)
