@@ -9,6 +9,20 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
+use zkdip_crypto::ecdh::EcdhKeyPair;
+use zkdip_crypto::encryption::AesGcmEncryption;
+
+#[derive(Serialize)]
+struct EnclaveGenerateRequest {
+    encrypted_srt: String,
+    client_public_key: String,
+}
+
+#[derive(Deserialize)]
+struct EnclaveGenerateResponse {
+    dat: String,
+    encrypted_drt: String,
+}
 
 #[derive(Serialize)]
 struct EnclaveRefreshRequest {
@@ -78,9 +92,51 @@ pub async fn assign_dip(
 
     tx.commit().await?;
 
+    let client_keypair = EcdhKeyPair::generate();
+    let client_public_b64 = client_keypair.public_key_base64();
+
+    let srt = state
+        .jwt_signer
+        .generate_srt(format!("anonymous_{}", token_hash), 0, 3)?;
+
+    let enclave_public_response: serde_json::Value = state
+        .http_client
+        .post(format!("{}/attestation", state.enclave_url))
+        .json(&json!({ "nonce": "request_nonce" }))
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let enclave_public_key_b64 = enclave_public_response["attestation"]["public_key"]
+        .as_str()
+        .ok_or_else(|| AppError::Internal("Missing enclave public key".to_string()))?;
+
+    let enclave_public = zkdip_crypto::ecdh::public_key_from_base64(enclave_public_key_b64)?;
+    let shared_secret = client_keypair.diffie_hellman(&enclave_public);
+    let encryptor = AesGcmEncryption::new(&shared_secret);
+
+    let encrypted_srt = encryptor
+        .encrypt_string(&srt)
+        .map_err(|e| AppError::Internal(format!("Failed to encrypt SRT: {}", e)))?;
+
+    let enclave_req = EnclaveGenerateRequest {
+        encrypted_srt,
+        client_public_key: client_public_b64,
+    };
+
+    let enclave_response: EnclaveGenerateResponse = state
+        .http_client
+        .post(format!("{}/api/v1/generate-tokens", state.enclave_url))
+        .json(&enclave_req)
+        .send()
+        .await?
+        .json()
+        .await?;
+
     Ok(Json(AssignResponse {
-        dat: format!("temporary_dat_for_{}", ip.ip),
-        encrypted_drt: "temporary_encrypted_drt".to_string(),
+        dat: enclave_response.dat,
+        encrypted_drt: enclave_response.encrypted_drt,
     }))
 }
 

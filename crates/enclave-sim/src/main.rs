@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/health", get(handlers::health))
-        .route("/attestation", get(handlers::get_attestation))
+        .route("/attestation", post(handlers::get_attestation))
         .route("/api/v1/generate-tokens", post(handlers::generate_tokens))
         .route("/api/v1/refresh-tokens", post(handlers::refresh_tokens))
         .layer(CorsLayer::permissive())
