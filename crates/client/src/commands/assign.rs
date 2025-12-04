@@ -4,6 +4,7 @@ use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use zkdip_crypto::blind_signature::BlindClient;
 use zkdip_crypto::jwt::JwtSigner;
+use rand::Rng;
 
 const BLIND_TOKEN_SERVICE: &str = "http://localhost:3001";
 const DIP_SERVICE: &str = "http://localhost:3003";
@@ -61,7 +62,11 @@ pub async fn run(subscription_id: String) -> Result<()> {
 
     println!("{}", "Step 3: Create blinded token".bold());
     let blind_client = BlindClient::from_pem(&response.public_key_pem)?;
-    let message = b"random_token_for_dip_assignment_12345678";
+    
+    let mut rng = rand::rng();
+    let random_bytes: Vec<u8> = (0..32).map(|_| rng.random()).collect();
+    let message = random_bytes.as_slice();
+    
     let blinded = blind_client.blind(message)?;
     println!("✅ Token blinded");
     println!();
